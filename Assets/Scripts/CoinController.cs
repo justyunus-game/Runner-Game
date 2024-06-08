@@ -6,7 +6,7 @@ public class CoinController : MonoBehaviour
     [SerializeField]
     private Text scoreText;
 
-    private int scoreValue;
+    public int scoreValue { get; private set; }
 
     private void OnTriggerEnter(Collider other)
     {
