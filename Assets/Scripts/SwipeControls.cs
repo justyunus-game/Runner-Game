@@ -1,4 +1,3 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class SwipeControls : MonoBehaviour
@@ -18,27 +17,35 @@ public class SwipeControls : MonoBehaviour
     private GameObject player;
 
     [SerializeField]
-    private float maxHeightForJump = 2f;
-
-    [SerializeField]
     private float minDistanceForSwipe = 20f;
 
     [SerializeField]
     private float jumpForce = 3f;
+
+    [SerializeField]
+    private float transitionSpeed = 10f;
 
     public enum SwipeDirection { None, Up, Down, Left, Right }
 
     public delegate void SwipeAction(SwipeDirection direction);
     public static event SwipeAction OnSwipe;
 
+    private Vector3 targetPosition;
+
+    private Rigidbody rb;
+
     private void Start()
     {
         jumpSound = GetComponent<AudioSource>();
+        targetPosition = transform.position;
+        rb = GetComponent<Rigidbody>();
     }
 
     private void Update()
     {
         GetTouchInput();
+        Vector3 newPosition = Vector3.Lerp(transform.position, new Vector3(targetPosition.x, transform.position.y, targetPosition.z), Time.deltaTime * transitionSpeed);
+        transform.position = newPosition;
     }
 
     private void DetectSwipe()
@@ -84,7 +91,7 @@ public class SwipeControls : MonoBehaviour
                 //}
             }
 
-            Vector3 targetPosition = transform.position.z * transform.forward + transform.position.y * transform.up;
+            targetPosition = transform.position.z * transform.forward + transform.position.y * transform.up;
 
             if (desiredLane == 0)
             {
@@ -94,8 +101,6 @@ public class SwipeControls : MonoBehaviour
             {
                 targetPosition += Vector3.right * laneDistance;
             }
-
-            transform.position = targetPosition;
         }
     }
 
@@ -127,9 +132,9 @@ public class SwipeControls : MonoBehaviour
 
     private void Jump()
     {
-        if (player && transform.position.y < maxHeightForJump)
+        if (player && Mathf.Abs(rb.linearVelocity.y) < 0.001f)
         {
-            GetComponent<Rigidbody>().AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             GetComponentInChildren<Animator>().SetTrigger("jump");
         }
     }
