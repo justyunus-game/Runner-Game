@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class SwipeControls : MonoBehaviour
 {
+    private AudioSource jumpSound;
+
     private Vector2 fingerDownPosition;
     private Vector2 fingerUpPosition;
 
@@ -29,6 +31,11 @@ public class SwipeControls : MonoBehaviour
     public delegate void SwipeAction(SwipeDirection direction);
     public static event SwipeAction OnSwipe;
 
+    private void Start()
+    {
+        jumpSound = GetComponent<AudioSource>();
+    }
+
     private void Update()
     {
         GetTouchInput();
@@ -51,7 +58,6 @@ public class SwipeControls : MonoBehaviour
                         desiredLane = 2;
                     }
                 }
-
                 else
                 {
                     OnSwipe?.Invoke(SwipeDirection.Left);
@@ -68,6 +74,7 @@ public class SwipeControls : MonoBehaviour
                 if (direction.y > 0)
                 {
                     Jump();
+                    jumpSound.Play();
                     OnSwipe?.Invoke(SwipeDirection.Up);
                 }
                 //else                                                         !! if you want to add a swipe down feature !!
@@ -120,14 +127,12 @@ public class SwipeControls : MonoBehaviour
 
     private void Jump()
     {
-        // Karakter belirli bir yükseklikteyken zýplamasýný engelle
         if (player && transform.position.y < maxHeightForJump)
         {
             GetComponent<Rigidbody>().AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             GetComponentInChildren<Animator>().SetTrigger("jump");
         }
     }
-
 
     private bool SwipeDistanceCheckMet()
     {
