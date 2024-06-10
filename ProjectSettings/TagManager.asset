@@ -8,6 +8,7 @@ TagManager:
   - Destroy
   - Obstacle
   - Coin
+  - Ground
   layers:
   - Default
   - TransparentFX

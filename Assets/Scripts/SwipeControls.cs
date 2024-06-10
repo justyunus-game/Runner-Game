@@ -2,6 +2,13 @@ using UnityEngine;
 
 public class SwipeControls : MonoBehaviour
 {
+    public bool isPlaying = true;
+    private bool isGrounded = true;
+
+    [SerializeField]
+    private AudioSource switchSideSound;
+
+    [SerializeField]
     private AudioSource jumpSound;
 
     private Vector2 fingerDownPosition;
@@ -33,75 +40,83 @@ public class SwipeControls : MonoBehaviour
     private Vector3 targetPosition;
 
     private Rigidbody rb;
+    private Collider playerCollider;
 
     private void Start()
     {
-        jumpSound = GetComponent<AudioSource>();
         targetPosition = transform.position;
         rb = GetComponent<Rigidbody>();
+        playerCollider = GetComponent<Collider>();
     }
 
     private void Update()
     {
+        //IsPlaying();
         GetTouchInput();
         Vector3 newPosition = Vector3.Lerp(transform.position, new Vector3(targetPosition.x, transform.position.y, targetPosition.z), Time.deltaTime * transitionSpeed);
         transform.position = newPosition;
+        CheckGroundStatus();
     }
 
     private void DetectSwipe()
     {
-        if (SwipeDistanceCheckMet())
+        if (isPlaying)
         {
-            Vector2 direction = fingerUpPosition - fingerDownPosition;
-            if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
+            if (SwipeDistanceCheckMet())
             {
-                // Horizontal swipe
-                if (direction.x > 0)
+                Vector2 direction = fingerUpPosition - fingerDownPosition;
+                if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y))
                 {
-                    OnSwipe?.Invoke(SwipeDirection.Right);
-                    desiredLane++;
-                    if (desiredLane == 3)
+                    // Horizontal swipe
+                    if (direction.x > 0)
                     {
-                        desiredLane = 2;
+                        OnSwipe?.Invoke(SwipeDirection.Right);
+                        switchSideSound.Play();
+                        desiredLane++;
+                        if (desiredLane == 3)
+                        {
+                            desiredLane = 2;
+                        }
+                    }
+                    else
+                    {
+                        OnSwipe?.Invoke(SwipeDirection.Left);
+                        switchSideSound.Play();
+                        desiredLane--;
+                        if (desiredLane == -1)
+                        {
+                            desiredLane = 0;
+                        }
                     }
                 }
                 else
                 {
-                    OnSwipe?.Invoke(SwipeDirection.Left);
-                    desiredLane--;
-                    if (desiredLane == -1)
+                    // Vertical swipe
+                    if (direction.y > 0 && isGrounded)
                     {
-                        desiredLane = 0;
+                        Jump();
+                        OnSwipe?.Invoke(SwipeDirection.Up);
                     }
+                    //else                                                         !! if you want to add a swipe down feature !!
+                    //{
+                    //    GetComponentInChildren<Animator>().SetTrigger("roll");
+                    //    OnSwipe?.Invoke(SwipeDirection.Down);
+                    //}
                 }
-            }
-            else
-            {
-                // Vertical swipe
-                if (direction.y > 0)
+
+                targetPosition = transform.position.z * transform.forward + transform.position.y * transform.up;
+
+                if (desiredLane == 0)
                 {
-                    Jump();
-                    jumpSound.Play();
-                    OnSwipe?.Invoke(SwipeDirection.Up);
+                    targetPosition += Vector3.left * laneDistance;
                 }
-                //else                                                         !! if you want to add a swipe down feature !!
-                //{
-                //    GetComponentInChildren<Animator>().SetTrigger("roll");
-                //    OnSwipe?.Invoke(SwipeDirection.Down);
-                //}
-            }
-
-            targetPosition = transform.position.z * transform.forward + transform.position.y * transform.up;
-
-            if (desiredLane == 0)
-            {
-                targetPosition += Vector3.left * laneDistance;
-            }
-            else if (desiredLane == 2)
-            {
-                targetPosition += Vector3.right * laneDistance;
+                else if (desiredLane == 2)
+                {
+                    targetPosition += Vector3.right * laneDistance;
+                }
             }
         }
+
     }
 
     private void GetTouchInput()
@@ -132,15 +147,61 @@ public class SwipeControls : MonoBehaviour
 
     private void Jump()
     {
-        if (player && Mathf.Abs(rb.linearVelocity.y) < 0.001f)
+        if (player && isGrounded)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             GetComponentInChildren<Animator>().SetTrigger("jump");
+            jumpSound.Play();
+            isGrounded = false;
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = true;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
         }
     }
 
     private bool SwipeDistanceCheckMet()
     {
         return Vector3.Distance(fingerDownPosition, fingerUpPosition) > minDistanceForSwipe;
+    }
+
+    //private void IsPlaying()
+    //{
+    //    if (Time.timeScale == 0)
+    //    {
+    //        isPlaying = false;
+    //    }
+    //    else
+    //    {
+    //        isPlaying = true;
+    //    }
+    //}
+
+    private void CheckGroundStatus()
+    {
+        RaycastHit hit;
+        if (Physics.Raycast(playerCollider.bounds.center, Vector3.down, out hit, playerCollider.bounds.extents.y + 0.1f))
+        {
+            if (hit.collider.CompareTag("Ground"))
+            {
+                isGrounded = true;
+            }
+        }
+        else
+        {
+            isGrounded = false;
+        }
     }
 }
